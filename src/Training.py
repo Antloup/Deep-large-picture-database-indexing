@@ -41,6 +41,9 @@ if __name__ == '__main__':
     net.to(device)
 
     criterion = nn.CrossEntropyLoss()
+
+    criterion = torch.nn.MSELoss()
+
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     for epoch in range(2):
@@ -49,10 +52,11 @@ if __name__ == '__main__':
             inputs, labels = data
             # imshow(torchvision.utils.make_grid(inputs))
             # input("Press enter")
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs, labels = inputs.to(device), labels.float().to(device)
             optimizer.zero_grad()
 
             outputs = net(inputs)
+            labels = torch.eye(2)[labels.long()]
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()

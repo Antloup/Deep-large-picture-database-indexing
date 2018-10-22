@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     random.seed(20)
 
-    threshold = 0.5
+    threshold = 0.95
 
 
     # Mock of face detector
@@ -33,16 +33,23 @@ if __name__ == '__main__':
 
         tensor = transform(sampleImage)
         result_net = net(tensor.reshape(1, 1, 36, 36))
-        _, predicted = torch.max(result_net, 1)
-
-        result = predicted[0].numpy().item(0)
+        predicted = result_net.detach().numpy()
+        result = predicted.item(1)
+        # result = predicted[0].numpy().item(1)
+        # print(result_net)
+        # print(result)
 
         # if result == 1:
             # print(result_net)
             # sampleImage.show()
             # input()
+        if predicted.item(1) >= threshold and predicted.item(0) <= (1-threshold):
+            # print(result)
+            return result
+        else:
+            return 0
 
-        return result
+        # return result
 
 
     image = Image.open("../test.jpg")
@@ -54,7 +61,7 @@ if __name__ == '__main__':
     originalSize = image.size
 
     sampleSize = (36, 36)
-    offset = (18, 18)
+    offset = (10, 10)
 
     resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
 
@@ -160,28 +167,28 @@ if __name__ == '__main__':
     draw = ImageDraw.Draw(image)
 
     for bestMatch in matches:
-        # normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
-        # color = compute_color(normalizedProbability)
-        color = (0,0,0)
+        normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
+        color = compute_color(normalizedProbability)
+        # color = (0,0,0)
         width = 2
 
-        # draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
-        # draw.line((bestMatch.left, bestMatch.bottom(), bestMatch.right(), bestMatch.bottom()), fill=color,
-        #           width=width)  # bottom
-        # draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
-        # draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
-        #           width=width)  # right
-        # draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
+        draw.line((bestMatch.left, bestMatch.bottom(), bestMatch.right(), bestMatch.bottom()), fill=color,
+                  width=width)  # bottom
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
+        draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
+                  width=width)  # right
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
 
         x = round((bestMatch.left + bestMatch.right()) / 2)
         y = round((bestMatch.top + bestMatch.bottom()) / 2)
 
-        color = (255, 0, 0)
+        # color = (255, 0, 0)
         draw.line((x, y, x+1, y+1), fill=color, width=width)  # center
 
-        # draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
-        #           width=14)  # top
+        draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
+                  width=14)  # top
 
-        draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
+        draw.text((bestMatch.left + 2, bestMatch.top), str(normalizedProbability)[0:7], (255, 255, 255))
 
     image.show()
