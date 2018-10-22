@@ -1,16 +1,24 @@
 import torch
 import torchvision
+from torchvision import transforms
 
 from PIL import Image, ImageDraw
 from Net import Net
+
+transform = transforms.Compose(
+    [transforms.Grayscale(),
+     transforms.ToTensor(),
+     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+)
+
 
 if __name__ == '__main__':
 
     import random
 
     net = Net()
-    net.load_state_dict(torch.load("../xmodel.pt"))
-    # net.eval()
+    net.load_state_dict(torch.load("../model.pt"))
+    net.eval()
 
 
     class matchClass:
@@ -44,36 +52,24 @@ if __name__ == '__main__':
 
     # Mock of face detector
     def is_face(sampleImage):
-        # probabilty = random.randint(0, 100000) / 100000
-        #
-        # if threshold < probabilty < 1:
-        #     return probabilty
-        #
-        # return 0
 
-        sampleImage.show()
+        # sampleImage.show()
 
-        grayscale = torchvision.transforms.Grayscale()(sampleImage)
-        tensor = torchvision.transforms.ToTensor()(grayscale)
-        result = net(tensor.reshape(1, 1, 36, 36))
-        _, predicted = torch.max(result, 1)
+        tensor = transform(sampleImage)
+        result_net = net(tensor.reshape(1, 1, 36, 36))
+        _, predicted = torch.max(result_net, 1)
 
+        result = predicted[0].numpy().item(0)
 
-        print(result)
+        # if result == 1:
+            # print(result_net)
+            # sampleImage.show()
+            # input()
 
-
-        return predicted[0].numpy().item(0)
+        return result
 
 
-
-
-    image = Image.open("../test_resize.jpg")
-
-
-    girl = torchvision.transforms.functional.crop(image, 25, 57, 36, 36)
-
-    print (is_face(girl))
-    exit(66)
+    image = Image.open("../test.jpg")
 
     # image.show()
 
@@ -82,7 +78,7 @@ if __name__ == '__main__':
     originalSize = image.size
 
     sampleSize = (36, 36)
-    offset = (10, 10)
+    offset = (18, 18)
 
     resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
 
@@ -122,8 +118,6 @@ if __name__ == '__main__':
             topOffset += offset[1]
 
         resizedHeight -= offset[1]
-
-        break
 
     bestMatches = []
 
@@ -195,13 +189,19 @@ if __name__ == '__main__':
         color = (0,0,0)
         width = 2
 
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
-        draw.line((bestMatch.left, bestMatch.bottom(), bestMatch.right(), bestMatch.bottom()), fill=color,
-                  width=width)  # bottom
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
-        draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
-                  width=width)  # right
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
+        # draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
+        # draw.line((bestMatch.left, bestMatch.bottom(), bestMatch.right(), bestMatch.bottom()), fill=color,
+        #           width=width)  # bottom
+        # draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
+        # draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
+        #           width=width)  # right
+        # draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
+
+        x = round((bestMatch.left + bestMatch.right()) / 2)
+        y = round((bestMatch.top + bestMatch.bottom()) / 2)
+
+        color = (255, 0, 0)
+        draw.line((x, y, x+1, y+1), fill=color, width=width)  # center
 
         # draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
         #           width=14)  # top
