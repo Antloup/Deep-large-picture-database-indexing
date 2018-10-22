@@ -2,6 +2,7 @@
 datasets/
 test_images/
 train_images/
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
