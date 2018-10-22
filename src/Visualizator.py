@@ -4,6 +4,7 @@ from torchvision import transforms
 
 from PIL import Image, ImageDraw
 from Net import Net
+from Match import Match
 
 transform = transforms.Compose(
     [transforms.Grayscale(),
@@ -20,34 +21,9 @@ if __name__ == '__main__':
     net.load_state_dict(torch.load("../model.pt"))
     net.eval()
 
-
-    class matchClass:
-        def __init__(self, left, top, width, height, probability):
-            self.left = left
-            self.top = top
-            self.width = width
-            self.height = height
-            self.probability = probability
-
-        def right(self):
-            return self.left + self.width
-
-        def bottom(self):
-            return self.top + self.height
-
-        def __eq__(self, other):
-            return self.left == other.left and \
-                   self.top == other.top and \
-                   self.width == other.width and \
-                   self.height == other.height
-
-        def __hash__(self):
-            return hash((self.left, self.top, self.width, self.height))
-
-
     random.seed(20)
 
-    threshold = 0.999
+    threshold = 0.5
 
 
     # Mock of face detector
@@ -110,7 +86,7 @@ if __name__ == '__main__':
                     sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
                     sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
 
-                    matches.append(matchClass(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
+                    matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
                                               sampleHeightOriginalSized, is_face_probabilty))
 
                 leftOffset += offset[0]
@@ -206,6 +182,6 @@ if __name__ == '__main__':
         # draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
         #           width=14)  # top
 
-        # draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
+        draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
 
     image.show()
