@@ -9,8 +9,8 @@ if __name__ == '__main__':
     import random
 
     net = Net()
-    net.load_state_dict(torch.load("../net_model.pt"))
-    net.eval()
+    net.load_state_dict(torch.load("../xmodel.pt"))
+    # net.eval()
 
 
     class matchClass:
@@ -51,14 +51,29 @@ if __name__ == '__main__':
         #
         # return 0
 
-        grayscale = sampleImage.convert('L')
+        sampleImage.show()
+
+        grayscale = torchvision.transforms.Grayscale()(sampleImage)
         tensor = torchvision.transforms.ToTensor()(grayscale)
-        _, predicted = torch.max(net(tensor.reshape(1, 1, 36, 36)), 1)
+        result = net(tensor.reshape(1, 1, 36, 36))
+        _, predicted = torch.max(result, 1)
 
-        return predicted[0] == 1
+
+        print(result)
 
 
-    image = Image.open("../test.jpg")
+        return predicted[0].numpy().item(0)
+
+
+
+
+    image = Image.open("../test_resize.jpg")
+
+
+    girl = torchvision.transforms.functional.crop(image, 25, 57, 36, 36)
+
+    print (is_face(girl))
+    exit(66)
 
     # image.show()
 
@@ -91,6 +106,7 @@ if __name__ == '__main__':
 
                 is_face_probabilty = is_face(sampleImage)
 
+
                 if is_face_probabilty > 0:
                     topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
                     leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
@@ -106,6 +122,8 @@ if __name__ == '__main__':
             topOffset += offset[1]
 
         resizedHeight -= offset[1]
+
+        break
 
     bestMatches = []
 
@@ -171,9 +189,10 @@ if __name__ == '__main__':
 
     draw = ImageDraw.Draw(image)
 
-    for bestMatch in bestMatches:
-        normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
-        color = compute_color(normalizedProbability)
+    for bestMatch in matches:
+        # normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
+        # color = compute_color(normalizedProbability)
+        color = (0,0,0)
         width = 2
 
         draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
@@ -182,11 +201,11 @@ if __name__ == '__main__':
         draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
         draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
                   width=width)  # right
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=14)  # top
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
 
-        draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
-                  width=14)  # top
+        # draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
+        #           width=14)  # top
 
-        draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
+        # draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
 
     image.show()
