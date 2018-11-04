@@ -3,6 +3,8 @@ import torchvision
 
 from PIL import Image, ImageDraw
 from Net import Net
+# from IntersectCluster import IntersectCluster
+from MagnetCluster import MagnetCluster
 
 if __name__ == '__main__':
 
@@ -27,6 +29,9 @@ if __name__ == '__main__':
         def bottom(self):
             return self.top + self.height
 
+        def center(self):
+            return [self.left + self.width / 2, self.top + self.height/2]
+
         def __eq__(self, other):
             return self.left == other.left and \
                    self.top == other.top and \
@@ -39,21 +44,26 @@ if __name__ == '__main__':
 
     random.seed(20)
 
-    threshold = 0.999
+    threshold = 0.99
 
 
     # Mock of face detector
     def is_face(sampleImage):
-        # probabilty = random.randint(0, 100000) / 100000
-        #
-        # if threshold < probabilty < 1:
-        #     return probabilty
-        #
-        # return 0
+        probabilty = random.randint(0, 100000) / 100000
+
+        if threshold < probabilty < 1:
+            return probabilty
+
+        return 0
 
         grayscale = sampleImage.convert('L')
         tensor = torchvision.transforms.ToTensor()(grayscale)
         _, predicted = torch.max(net(tensor.reshape(1, 1, 36, 36)), 1)
+
+        if predicted[0] == 1:
+            return 1
+        else:
+            return 0
 
         return predicted[0] == 1
 
@@ -67,7 +77,7 @@ if __name__ == '__main__':
     originalSize = image.size
 
     sampleSize = (36, 36)
-    offset = (10, 10)
+    offset = (20, 20)
 
     resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
 
@@ -107,47 +117,10 @@ if __name__ == '__main__':
 
         resizedHeight -= offset[1]
 
-    bestMatches = []
 
     # Filter the best matches
 
-    matchIndex = 0
-
-    for match in matches:
-
-        bestMatchIndex = 0
-
-        nonEmptyIntersectedBestMatchIndexes = []
-
-        for bestMatch in bestMatches:
-
-            # If the intersection is not empty
-            if bestMatch.right() > match.left and \
-                    match.right() > bestMatch.left and \
-                    bestMatch.bottom() > match.top and \
-                    match.bottom() > bestMatch.top:
-                nonEmptyIntersectedBestMatchIndexes.append(bestMatchIndex)
-
-            bestMatchIndex += 1
-
-        if len(nonEmptyIntersectedBestMatchIndexes) == 0:
-            bestMatches.append(match)
-        else:
-
-            betterProbability = False
-
-            for bestMatchIndex in nonEmptyIntersectedBestMatchIndexes:
-                if match.probability > bestMatches[bestMatchIndex].probability:
-                    betterProbability = True
-                    break
-
-            if betterProbability:
-                for bestMatchIndex in nonEmptyIntersectedBestMatchIndexes:
-                    bestMatches[bestMatchIndex] = match
-
-        matchIndex += 1
-
-    bestMatches = list(set(bestMatches))  # Remove duplicates
+    bestMatches = MagnetCluster.extract(matches, 60)
 
     print(len(bestMatches))
 
