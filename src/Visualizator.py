@@ -6,13 +6,6 @@ from PIL import Image, ImageDraw
 from Net import Net
 from Match import Match
 
-transform = transforms.Compose(
-    [transforms.Grayscale(),
-     transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-)
-
-
 if __name__ == '__main__':
 
     import random
@@ -31,7 +24,7 @@ if __name__ == '__main__':
 
         # sampleImage.show()
 
-        tensor = transform(sampleImage)
+        tensor = Net.transform(sampleImage)
         result_net = net(tensor.reshape(1, 1, 36, 36))
         predicted = result_net.detach().numpy()
         result = predicted.item(1)
@@ -43,13 +36,9 @@ if __name__ == '__main__':
             # print(result_net)
             # sampleImage.show()
             # input()
-        if predicted.item(1) >= threshold and predicted.item(0) <= (1-threshold):
-            # print(result)
-            return result
-        else:
-            return 0
 
-        # return result
+        return result
+
 
 
     image = Image.open("../test.jpg")
@@ -85,8 +74,7 @@ if __name__ == '__main__':
 
                 is_face_probabilty = is_face(sampleImage)
 
-
-                if is_face_probabilty > 0:
+                if is_face_probabilty > .98:
                     topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
                     leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
 
@@ -167,7 +155,7 @@ if __name__ == '__main__':
     draw = ImageDraw.Draw(image)
 
     for bestMatch in matches:
-        normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
+        normalizedProbability = bestMatch.probability
         color = compute_color(normalizedProbability)
         # color = (0,0,0)
         width = 2
