@@ -4,24 +4,39 @@ from PIL import Image, ImageDraw
 
 from src.MagnetCluster import MagnetCluster
 from src.Matcher import Matcher
+import argparse
 
 if __name__ == '__main__':
 
-    filename = "test.jpg"
+    parser = argparse.ArgumentParser(description='Find face on picture.')
+    parser.add_argument('-f','--filename', metavar='FILENAME', type=str, default="assemblee.jpg",
+                        help='File name')
+    parser.add_argument('-p','--path', metavar='PATH', type=str, default="samples/",
+                        help='Path of the file')
+    parser.add_argument('-mh', '--maxheight', metavar='MAXHEIGHT', type=int, default=1000,
+                        help='Picture is resized to a max height (0 for unlimited height)')
+    parser.add_argument('-t', '--threshold', metavar='THRESHOLD', type=float, default=0.99,
+                        help='Threshold for face detection')
+    parser.add_argument('-o', '--offset', metavar='OFFSET', type=int, default=10,
+                        help='Offset of the window')
+    parser.add_argument('-md', '--min-dist', metavar='MIN-DIST', type=int, default=20,
+                        help='Minimum distance for clustering window')
+    parser.add_argument('-mv', '--min-votes', metavar='MIN-VOTES', type=int, default=1,
+                        help='Number minimum of vote for face detection')
 
-    image = Image.open("../samples/" + filename)
+    args = parser.parse_args()
 
-    maximalHeight = 1000
+    image = Image.open("../"+ args.path + args.filename)
 
-    if maximalHeight != 0 and image.size[1] > maximalHeight:
-        preprocessedWidth = int(maximalHeight * image.size[0] / image.size[1])
-        image = torchvision.transforms.Resize((maximalHeight, preprocessedWidth))(image)
+    if args.maxheight != 0 and image.size[1] > args.maxheight:
+        preprocessedWidth = int(args.maxheight * image.size[0] / image.size[1])
+        image = torchvision.transforms.Resize((args.maxheight, preprocessedWidth))(image)
 
-    matcher = Matcher(image, sampleSize=(36, 36), offset=(10, 10), threshold=0.99)
+    matcher = Matcher(image, sampleSize=(36, 36), offset=(args.offset, args.offset), threshold=args.threshold)
 
     matches = matcher.matches
 
-    bestMatches = MagnetCluster.extract(matches, 20)
+    bestMatches = MagnetCluster.extract(matches, args.min_dist, args.min_votes)
 
     print(str(len(bestMatches)) + " best matches found")
 
@@ -76,4 +91,4 @@ if __name__ == '__main__':
     out.show()
 
     out = out.convert('RGB')
-    out.save("../results/result_" + filename)
+    out.save("../results/result_" + args.filename)

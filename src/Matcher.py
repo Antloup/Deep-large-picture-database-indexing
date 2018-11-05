@@ -22,9 +22,7 @@ class MatcherThread(Thread):
         self.net = Net()
         self.net.load_state_dict(torch.load("../models/model.pt"))
         self.net.eval()
-
         self.tasks = tasks
-
         self.matches = []
 
     def is_face(self, sampleImage):
@@ -61,9 +59,6 @@ class Matcher:
     def __init__(self, image, sampleSize, offset, threshold):
 
         originalSize = image.size
-
-        sampleSize = (36, 36)
-        offset = (10, 10)
 
         resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
 
