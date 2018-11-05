@@ -7,6 +7,8 @@ from Net import Net
 # from IntersectCluster import IntersectCluster
 from MagnetCluster import MagnetCluster
 
+from src.Match import Match
+
 if __name__ == '__main__':
 
     import random
@@ -15,37 +17,9 @@ if __name__ == '__main__':
     net.load_state_dict(torch.load("../model.pt"))
     net.eval()
 
-
-    class matchClass:
-        def __init__(self, left, top, width, height, probability):
-            self.left = left
-            self.top = top
-            self.width = width
-            self.height = height
-            self.probability = probability
-
-        def right(self):
-            return self.left + self.width
-
-        def bottom(self):
-            return self.top + self.height
-
-        def center(self):
-            return [self.left + self.width / 2, self.top + self.height/2]
-
-        def __eq__(self, other):
-            return self.left == other.left and \
-                   self.top == other.top and \
-                   self.width == other.width and \
-                   self.height == other.height
-
-        def __hash__(self):
-            return hash((self.left, self.top, self.width, self.height))
-
-
     random.seed(20)
 
-    threshold = 0.99
+    threshold = 0.95
 
 
     # Mock of face detector
@@ -70,7 +44,7 @@ if __name__ == '__main__':
 
 
 
-    image = Image.open("../test.jpg")
+    image = Image.open("../cgt.jpg").convert('RGBA')
 
     # image.show()
 
@@ -103,7 +77,7 @@ if __name__ == '__main__':
 
                 is_face_probabilty = is_face(sampleImage)
 
-                if is_face_probabilty > .98:
+                if is_face_probabilty > threshold:
                     topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
                     leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
 
@@ -122,7 +96,7 @@ if __name__ == '__main__':
 
     # Filter the best matches
 
-    bestMatches = MagnetCluster.extract(matches, 60)
+    bestMatches = MagnetCluster.extract(matches, 30)
 
     print(len(bestMatches))
 
@@ -139,14 +113,16 @@ if __name__ == '__main__':
             r = round(0xFB + q * (0x21 - 0xFB))
             g = round(0xBD + q * (0xBA - 0xBD))
             b = round(0x08 + q * (0x45 - 0x08))
-        return r, g, b
+        return r, g, b, 192
 
 
     # Draw best matches
 
-    draw = ImageDraw.Draw(image)
+    layer = Image.new('RGBA', image.size, (255, 255, 255, 0))
 
-    for bestMatch in matches:
+    draw = ImageDraw.Draw(layer)
+
+    for bestMatch in bestMatches:
         normalizedProbability = bestMatch.probability
         color = compute_color(normalizedProbability)
         # color = (0,0,0)
@@ -169,6 +145,8 @@ if __name__ == '__main__':
         draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
                   width=14)  # top
 
-        draw.text((bestMatch.left + 2, bestMatch.top), str(normalizedProbability)[0:7], (255, 255, 255))
+        draw.text((bestMatch.left + 2, bestMatch.top), str(normalizedProbability)[0:7], (255, 255, 255, 192))
 
-    image.show()
+    out = Image.alpha_composite(image, layer)
+
+    out.show()

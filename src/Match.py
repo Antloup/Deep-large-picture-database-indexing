@@ -12,6 +12,9 @@ class Match:
     def bottom(self):
         return self.top + self.height
 
+    def center(self):
+        return [self.left + self.width / 2, self.top + self.height / 2]
+
     def __eq__(self, other):
         return self.left == other.left and \
                self.top == other.top and \
