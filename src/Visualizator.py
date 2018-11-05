@@ -1,5 +1,6 @@
 import torch
 import torchvision
+from torchvision import transforms
 
 from PIL import Image, ImageDraw
 from Net import Net
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     import random
 
     net = Net()
-    net.load_state_dict(torch.load("../net_model.pt"))
+    net.load_state_dict(torch.load("../model.pt"))
     net.eval()
 
 
@@ -49,23 +50,24 @@ if __name__ == '__main__':
 
     # Mock of face detector
     def is_face(sampleImage):
-        probabilty = random.randint(0, 100000) / 100000
 
-        if threshold < probabilty < 1:
-            return probabilty
+        # sampleImage.show()
 
-        return 0
+        tensor = Net.transform(sampleImage)
+        result_net = net(tensor.reshape(1, 1, 36, 36))
+        predicted = result_net.detach().numpy()
+        result = predicted.item(1)
+        # result = predicted[0].numpy().item(1)
+        # print(result_net)
+        # print(result)
 
-        grayscale = sampleImage.convert('L')
-        tensor = torchvision.transforms.ToTensor()(grayscale)
-        _, predicted = torch.max(net(tensor.reshape(1, 1, 36, 36)), 1)
+        # if result == 1:
+            # print(result_net)
+            # sampleImage.show()
+            # input()
 
-        if predicted[0] == 1:
-            return 1
-        else:
-            return 0
+        return result
 
-        return predicted[0] == 1
 
 
     image = Image.open("../test.jpg")
@@ -101,14 +103,14 @@ if __name__ == '__main__':
 
                 is_face_probabilty = is_face(sampleImage)
 
-                if is_face_probabilty > 0:
+                if is_face_probabilty > .98:
                     topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
                     leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
 
                     sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
                     sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
 
-                    matches.append(matchClass(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
+                    matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
                                               sampleHeightOriginalSized, is_face_probabilty))
 
                 leftOffset += offset[0]
@@ -144,9 +146,10 @@ if __name__ == '__main__':
 
     draw = ImageDraw.Draw(image)
 
-    for bestMatch in bestMatches:
-        normalizedProbability = (bestMatch.probability - threshold) / (1 - threshold)
+    for bestMatch in matches:
+        normalizedProbability = bestMatch.probability
         color = compute_color(normalizedProbability)
+        # color = (0,0,0)
         width = 2
 
         draw.line((bestMatch.left, bestMatch.top, bestMatch.right(), bestMatch.top), fill=color, width=width)  # top
@@ -155,11 +158,17 @@ if __name__ == '__main__':
         draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
         draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
                   width=width)  # right
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=14)  # top
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
+
+        x = round((bestMatch.left + bestMatch.right()) / 2)
+        y = round((bestMatch.top + bestMatch.bottom()) / 2)
+
+        # color = (255, 0, 0)
+        draw.line((x, y, x+1, y+1), fill=color, width=width)  # center
 
         draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
                   width=14)  # top
 
-        draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.probability)[1:], (255, 255, 255))
+        draw.text((bestMatch.left + 2, bestMatch.top), str(normalizedProbability)[0:7], (255, 255, 255))
 
     image.show()

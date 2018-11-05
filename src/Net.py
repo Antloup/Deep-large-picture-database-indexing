@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 
 class Net(nn.Module):
     def __init__(self):
@@ -18,6 +19,7 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
+        x = F.softmax(x, 1)
         return x
 
     def num_flat_features(self, x):
@@ -26,3 +28,12 @@ class Net(nn.Module):
         for s in size:
             num_features *= s
         return num_features
+
+    @staticmethod
+    def transform(png_picture):
+        transform = transforms.Compose([
+            transforms.Grayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        return transform(png_picture)
