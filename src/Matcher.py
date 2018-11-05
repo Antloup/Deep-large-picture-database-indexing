@@ -6,16 +6,59 @@ from torchvision import transforms
 from src.Net import Net
 from src.Match import Match
 import torch
+import time
+import multiprocessing
+
+class MatcherThread(Thread):
+
+
+    """Thread chargé simplement d'afficher une lettre dans la console."""
+
+
+    def __init__(self, tasks):
+
+        Thread.__init__(self)
+
+        self.net = Net()
+        self.net.load_state_dict(torch.load("../models/model.pt"))
+        self.net.eval()
+
+        self.tasks = tasks
+
+        self.matches = []
+
+    def is_face(self, sampleImage):
+        tensor = Net.transform(sampleImage)
+        result_net = self.net(tensor.reshape(1, 1, 36, 36))
+        predicted = result_net.detach().numpy()
+        result = predicted.item(1)
+
+        return result
+
+    def run(self):
+
+        for task in self.tasks:
+
+            sampleImage, sampleSize, originalSize, threshold, topOffset, leftOffset, resizedWidth, resizedHeight = task
+
+            is_face_probabilty = self.is_face(sampleImage)
+
+            if is_face_probabilty > threshold:
+                topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
+                leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
+
+                sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
+                sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
+
+                self.matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
+                                     sampleHeightOriginalSized, is_face_probabilty))
+
 
 class Matcher:
 
 
 
     def __init__(self, image, sampleSize, offset, threshold):
-
-        self.net = Net()
-        self.net.load_state_dict(torch.load("../models/model.pt"))
-        self.net.eval()
 
         originalSize = image.size
 
@@ -26,9 +69,11 @@ class Matcher:
 
         self.matches = []
 
-        while resizedHeight >= sampleSize[1]:
+        tasks = []
 
-            print(resizedHeight, sampleSize[1])
+        print("Work is preparing...")
+
+        while resizedHeight >= sampleSize[1]:
 
             resizedWidth = round(originalSize[0] * resizedHeight / originalSize[1])
 
@@ -39,21 +84,12 @@ class Matcher:
 
                 leftOffset = 0
                 while (leftOffset + sampleSize[0]) < resizedWidth:
+
                     sampleImage = torchvision.transforms.functional.crop(resizedImage, topOffset, leftOffset,
                                                                          sampleSize[1],
                                                                          sampleSize[0])
 
-                    is_face_probabilty = self.is_face(sampleImage)
-
-                    if is_face_probabilty > threshold:
-                        topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
-                        leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
-
-                        sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
-                        sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
-
-                        self.matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
-                                             sampleHeightOriginalSized, is_face_probabilty))
+                    tasks.append((sampleImage, sampleSize, originalSize, threshold, topOffset, leftOffset, resizedWidth, resizedHeight))
 
                     leftOffset += offset[0]
 
@@ -61,10 +97,38 @@ class Matcher:
 
             resizedHeight -= offset[1]
 
-    def is_face(self, sampleImage):
-        tensor = Net.transform(sampleImage)
-        result_net = self.net(tensor.reshape(1, 1, 36, 36))
-        predicted = result_net.detach().numpy()
-        result = predicted.item(1)
+        # Dbg
 
-        return result
+        number_of_worker = multiprocessing.cpu_count()
+
+        threads = []
+        threadsTasks = []
+
+        for t in range(number_of_worker):
+            threadsTasks.append([])
+
+        currentThreadIndex = 0
+        while len(tasks) > 0:
+            threadsTasks[currentThreadIndex].append(tasks.pop())
+            currentThreadIndex = (currentThreadIndex + 1) % number_of_worker
+
+        start = time.time()
+
+        for t in range(number_of_worker):
+            thread = MatcherThread(threadsTasks[t])
+            threads.append(thread)
+            thread.start()
+
+        print("Work is progressing...")
+        print(str(number_of_worker) + " worker(s)")
+
+        for t in range(number_of_worker):
+            threads[t].join()
+            for match in threads[t].matches:
+                self.matches.append(match)
+
+        end = time.time()
+
+        duration = end - start
+
+        print("Duration in seconds : " + str(int(duration)))

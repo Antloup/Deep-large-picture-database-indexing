@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     bestMatches = MagnetCluster.extract(matches, 20)
 
-    print(str(len(bestMatches)) + " matches")
+    print(str(len(bestMatches)) + " best matches found")
 
     # Return a color between red 0%, yellow 50% and green 100%
     def compute_color(probability):
