@@ -2,7 +2,7 @@ from math import hypot
 
 class MagnetCluster:
 
-    def extract(matches, epsilon):
+    def extract(matches, epsilon, minVotes):
 
         matchesCluster = {}
 
@@ -77,7 +77,7 @@ class MagnetCluster:
                         bestMatch = match
 
                 bestMatch.nbVotes = len(clusterMatches)
-
-                bestMatches.append(bestMatch)
+                if(bestMatch.nbVotes >= minVotes):
+                    bestMatches.append(bestMatch)
 
         return bestMatches
