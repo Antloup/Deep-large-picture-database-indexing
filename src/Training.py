@@ -39,31 +39,50 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
+    best_loss = float('inf')
+    epsilon = 0.10
+    best_model = Net()
+
     print("Start training")
+    k = 0
     for epoch in range(15):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
-            inputs, labels = data
-            # imshow(torchvision.utils.make_grid(inputs))
-            # input("Press enter")
-            inputs, labels = inputs.to(device), labels.float().to(device)
+            X_train, y_train = data
+            X_train, y_train = X_train.to(device), y_train.float().to(device)
             optimizer.zero_grad()
 
-            outputs = net(inputs)
-            labels = torch.eye(2)[labels.long()]
-            loss = criterion(outputs, labels)
+            predicted = net(X_train)
+            y_train = torch.eye(2)[y_train.long()]
+
+            loss = criterion(predicted, y_train)
             loss.backward()
             optimizer.step()
 
-            running_loss += loss.item()
-            if i % 200 == 199:
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 200))
-                running_loss = 0.0
+            running_loss = 0.0
+            for X_test, y_test in iter(testloader):
+                X_test, y_test = X_test.to(device), y_test.float().to(device)
+                optimizer.zero_grad()
+
+                predicted = net(X_test)
+                y_test = torch.eye(2)[y_test.long()]
+                loss = criterion(predicted, y_test)
+                running_loss += loss.item()
+
+            if k % 100 == 0:
+                print("Epoch {} \t[k = {}] \tscore {}".format(epoch, k, running_loss))
+            k += 1
+
+            if running_loss < best_loss:
+                best_loss = running_loss
+                print("Better loss:", best_loss)
+                best_model.load_state_dict(net.state_dict())
+            elif running_loss > best_loss * (1 + epsilon):
+                print("Exit because of over fitting")
+                break
 
     print('Finished Training')
-
-    torch.save(net.state_dict(), "../model.pt")
+    torch.save(best_model.state_dict(), "../model.pt")
 
     dataiter = iter(testloader)
     images, labels = dataiter.next()
