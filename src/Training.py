@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 
 import matplotlib.pyplot as plt
 import numpy as np
+from random import shuffle
 
 import torch.nn as nn
 
@@ -67,9 +68,9 @@ def validation(validation_loader, net):
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
-    valid_threshold = .5
+    valid_threshold = .9
     valid_split = .2
-    num_folds = 100
+    num_folds = 2
 
     trainset = torchvision.datasets.ImageFolder(root="../train_images", transform=transform)
     dataset_size = len(trainset)
@@ -80,6 +81,7 @@ if __name__ == '__main__':
     net = []
     train_loader = []
     validation_loader = []
+    shuffle(indices)
     for i in range(0, num_folds):
         split_start = dataset_size - (fold_split_size * (i + 1))
         split_end = split_start + fold_split_size
@@ -93,21 +95,6 @@ if __name__ == '__main__':
                                                              sampler=valid_sampler))
         net.append(Net())
         net[i].to(device)
-
-    # NO FOLD IMPLEMENTATION :
-    #
-    # split = int(np.floor(validation_split * dataset_size))
-    # train_indices, val_indices = indices[split:], indices[:split]
-    # train_sampler = SubsetRandomSampler(train_indices)
-    # valid_sampler = SubsetRandomSampler(val_indices)
-    #
-    # train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-    #                                            sampler=train_sampler)
-    # validation_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-    #                                                 sampler=valid_sampler)
-    #
-    # net = Net()
-    # net.to(device)
 
     classes = ('Non-visage', 'Visage')
 
