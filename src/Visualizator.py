@@ -1,113 +1,29 @@
-import torch
 import torchvision
-from torchvision import transforms
 
 from PIL import Image, ImageDraw
-from Net import Net
-# from IntersectCluster import IntersectCluster
-from MagnetCluster import MagnetCluster
 
-from src.Match import Match
+from src.MagnetCluster import MagnetCluster
+from src.Matcher import Matcher
 
 if __name__ == '__main__':
 
-    import random
-
-    net = Net()
-    net.load_state_dict(torch.load("../models/model.pt"))
-    net.eval()
-
-    # random.seed(20)
-
-    threshold = 0.99
-
-
-    # Mock of face detector
-    def is_face(sampleImage):
-
-        # sampleImage.show()
-
-        tensor = Net.transform(sampleImage)
-        result_net = net(tensor.reshape(1, 1, 36, 36))
-        predicted = result_net.detach().numpy()
-        result = predicted.item(1)
-        # result = predicted[0].numpy().item(1)
-        # print(result_net)
-        # print(result)
-
-        # if result == 1:
-            # print(result_net)
-            # sampleImage.show()
-            # input()
-
-        return result
-
-    filename = "rrrrrh.jpg"
+    filename = "test.jpg"
 
     image = Image.open("../samples/" + filename)
 
     maximalHeight = 1000
 
-    if True or image.size[1] > maximalHeight:
+    if maximalHeight != 0 and image.size[1] > maximalHeight:
         preprocessedWidth = int(maximalHeight * image.size[0] / image.size[1])
         image = torchvision.transforms.Resize((maximalHeight, preprocessedWidth))(image)
 
-    image = image.convert('RGBA')
+    matcher = Matcher(image, sampleSize=(36, 36), offset=(10, 10), threshold=0.99)
 
-    # image.show()
-
-    # Resize the image and crop it at different levels
-
-    originalSize = image.size
-
-    sampleSize = (36, 36)
-    offset = (10, 10)
-
-    resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
-
-    matches = []
-
-    while resizedHeight >= sampleSize[1]:
-
-        print(resizedHeight, sampleSize[1])
-
-        resizedWidth = round(originalSize[0] * resizedHeight / originalSize[1])
-
-        resizedImage = torchvision.transforms.Resize((resizedHeight, resizedWidth))(image)
-
-        topOffset = 0
-        while (topOffset + sampleSize[1]) < resizedHeight:
-
-            leftOffset = 0
-            while (leftOffset + sampleSize[0]) < resizedWidth:
-                sampleImage = torchvision.transforms.functional.crop(resizedImage, topOffset, leftOffset, sampleSize[1],
-                                                                     sampleSize[0])
-
-                is_face_probabilty = is_face(sampleImage)
-
-                if is_face_probabilty > threshold:
-                    topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
-                    leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
-
-                    sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
-                    sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
-
-                    matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
-                                              sampleHeightOriginalSized, is_face_probabilty))
-
-                leftOffset += offset[0]
-
-            topOffset += offset[1]
-
-        resizedHeight -= offset[1]
-
-
-    # Filter the best matches
+    matches = matcher.matches
 
     bestMatches = MagnetCluster.extract(matches, 20)
 
-    print(len(bestMatches))
-
+    print(str(len(bestMatches)) + " matches")
 
     # Return a color between red 0%, yellow 50% and green 100%
     def compute_color(probability):
@@ -126,6 +42,7 @@ if __name__ == '__main__':
 
     # Draw best matches
 
+    image = image.convert('RGBA')
     layer = Image.new('RGBA', image.size, (255, 255, 255, 0))
 
     draw = ImageDraw.Draw(layer)
@@ -142,13 +59,12 @@ if __name__ == '__main__':
         draw.line((bestMatch.left, bestMatch.top, bestMatch.left, bestMatch.bottom()), fill=color, width=width)  # left
         draw.line((bestMatch.right(), bestMatch.top, bestMatch.right(), bestMatch.bottom()), fill=color,
                   width=width)  # right
-        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # top
+        draw.line((bestMatch.left, bestMatch.top, bestMatch.right() + 1, bestMatch.top), fill=color, width=width)  # text bg
 
         x = round((bestMatch.left + bestMatch.right()) / 2)
         y = round((bestMatch.top + bestMatch.bottom()) / 2)
 
-        # color = (255, 0, 0)
-        draw.line((x, y, x+1, y+1), fill=color, width=width)  # center
+        draw.line((x, y, x+1, y+1), fill=color, width=width)  # center point
 
         draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
                   width=14)  # top
