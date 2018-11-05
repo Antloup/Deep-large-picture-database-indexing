@@ -8,50 +8,37 @@ from src.Match import Match
 import torch
 import time
 import multiprocessing
+from multiprocessing import Process, Queue
 
-class MatcherThread(Thread):
-
-
-    """Thread chargé simplement d'afficher une lettre dans la console."""
+matcher_task_to_solve = 0
 
 
-    def __init__(self, tasks):
+def f(args):
 
-        Thread.__init__(self)
+    tasks, results = args[0], args[1]
 
-        self.net = Net()
-        self.net.load_state_dict(torch.load("../models/model.pt"))
-        self.net.eval()
+    net = Net()
+    net.load_state_dict(torch.load("../models/model.pt"))
+    net.eval()
 
-        self.tasks = tasks
+    for task in tasks:
 
-        self.matches = []
+        sampleImage, sampleSize, originalSize, threshold, topOffset, leftOffset, resizedWidth, resizedHeight = task
 
-    def is_face(self, sampleImage):
         tensor = Net.transform(sampleImage)
-        result_net = self.net(tensor.reshape(1, 1, 36, 36))
+        result_net = net(tensor.reshape(1, 1, 36, 36))
         predicted = result_net.detach().numpy()
-        result = predicted.item(1)
+        is_face_probabilty = predicted.item(1)
 
-        return result
+        if is_face_probabilty > threshold:
+            topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
+            leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
 
-    def run(self):
+            sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
+            sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
 
-        for task in self.tasks:
-
-            sampleImage, sampleSize, originalSize, threshold, topOffset, leftOffset, resizedWidth, resizedHeight = task
-
-            is_face_probabilty = self.is_face(sampleImage)
-
-            if is_face_probabilty > threshold:
-                topOffsetOriginalSized = round(originalSize[1] * topOffset / resizedHeight)
-                leftOffsetOriginalSized = round(originalSize[0] * leftOffset / resizedWidth)
-
-                sampleHeightOriginalSized = round(originalSize[1] * sampleSize[1] / resizedHeight)
-                sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
-
-                self.matches.append(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
-                                     sampleHeightOriginalSized, is_face_probabilty))
+            results.put(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
+                                      sampleHeightOriginalSized, is_face_probabilty))
 
 
 class Matcher:
@@ -97,15 +84,22 @@ class Matcher:
 
             resizedHeight -= offset[1]
 
-        # Dbg
+
+
+
+        matcher_task_to_solve = len(tasks)
 
         number_of_worker = multiprocessing.cpu_count()
+        number_of_worker = 1
 
-        threads = []
+        threads = {}
         threadsTasks = []
+        threadsResults = []
 
         for t in range(number_of_worker):
             threadsTasks.append([])
+            threadsResults.append(Queue())
+
 
         currentThreadIndex = 0
         while len(tasks) > 0:
@@ -115,18 +109,25 @@ class Matcher:
         start = time.time()
 
         for t in range(number_of_worker):
-            thread = MatcherThread(threadsTasks[t])
-            threads.append(thread)
-            thread.start()
+            threads[t] = Process(target=f, args=([threadsTasks[t], threadsResults[t]],))
+            threads[t].start()
 
         print("Work is progressing...")
         print(str(number_of_worker) + " worker(s)")
+        print(str(matcher_task_to_solve) + " task(s)")
 
         for t in range(number_of_worker):
             threads[t].join()
-            for match in threads[t].matches:
-                self.matches.append(match)
 
+            while not (threadsResults[t].empty()):
+                self.matches.append(threadsResults[t].get())
+
+     #
+        # for t in range(number_of_worker):
+        #     threads[t].join()
+        #     while not(threadsResults[t].empty()):
+        #         print(threadsResults[t].get())
+        #
         end = time.time()
 
         duration = end - start

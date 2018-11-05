@@ -7,11 +7,11 @@ from src.Matcher import Matcher
 
 if __name__ == '__main__':
 
-    filename = "test.jpg"
+    filename = "kids.jpg"
 
     image = Image.open("../samples/" + filename)
 
-    maximalHeight = 1000
+    maximalHeight = 400
 
     if maximalHeight != 0 and image.size[1] > maximalHeight:
         preprocessedWidth = int(maximalHeight * image.size[0] / image.size[1])
