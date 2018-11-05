@@ -68,12 +68,16 @@ class MagnetCluster:
 
             clusterMatches = clusters[clusterIndex]
 
-            bestMatch = clusterMatches[0]
+            if len(clusterMatches) > 0:
 
-            for match in clusterMatches:
-                if match.probability > bestMatch.probability:
-                    bestMatch = match
+                bestMatch = clusterMatches[0]
 
-            bestMatches.append(bestMatch)
+                for match in clusterMatches:
+                    if match.probability > bestMatch.probability:
+                        bestMatch = match
+
+                bestMatch.nbVotes = len(clusterMatches)
+
+                bestMatches.append(bestMatch)
 
         return bestMatches

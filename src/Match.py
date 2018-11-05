@@ -5,6 +5,7 @@ class Match:
         self.width = width
         self.height = height
         self.probability = probability
+        self.nbVotes = 1
 
     def right(self):
         return self.left + self.width

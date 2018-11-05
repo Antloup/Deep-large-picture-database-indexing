@@ -14,12 +14,12 @@ if __name__ == '__main__':
     import random
 
     net = Net()
-    net.load_state_dict(torch.load("../model.pt"))
+    net.load_state_dict(torch.load("../models/model.pt"))
     net.eval()
 
-    random.seed(20)
+    # random.seed(20)
 
-    threshold = 0.95
+    threshold = 0.99
 
 
     # Mock of face detector
@@ -42,9 +42,17 @@ if __name__ == '__main__':
 
         return result
 
+    filename = "rrrrrh.jpg"
 
+    image = Image.open("../samples/" + filename)
 
-    image = Image.open("../cgt.jpg").convert('RGBA')
+    maximalHeight = 1000
+
+    if True or image.size[1] > maximalHeight:
+        preprocessedWidth = int(maximalHeight * image.size[0] / image.size[1])
+        image = torchvision.transforms.Resize((maximalHeight, preprocessedWidth))(image)
+
+    image = image.convert('RGBA')
 
     # image.show()
 
@@ -53,7 +61,7 @@ if __name__ == '__main__':
     originalSize = image.size
 
     sampleSize = (36, 36)
-    offset = (20, 20)
+    offset = (10, 10)
 
     resizedHeight = originalSize[1] - ((originalSize[1] - sampleSize[1]) % offset[1])
 
@@ -96,7 +104,7 @@ if __name__ == '__main__':
 
     # Filter the best matches
 
-    bestMatches = MagnetCluster.extract(matches, 30)
+    bestMatches = MagnetCluster.extract(matches, 20)
 
     print(len(bestMatches))
 
@@ -145,8 +153,11 @@ if __name__ == '__main__':
         draw.line((bestMatch.left, bestMatch.top + 5, bestMatch.right() + 1, bestMatch.top + 5), fill=color,
                   width=14)  # top
 
-        draw.text((bestMatch.left + 2, bestMatch.top), str(normalizedProbability)[0:7], (255, 255, 255, 192))
+        draw.text((bestMatch.left + 2, bestMatch.top), str(bestMatch.nbVotes) + " - " + str(normalizedProbability)[0:7], (255, 255, 255, 192))
 
     out = Image.alpha_composite(image, layer)
 
     out.show()
+
+    out = out.convert('RGB')
+    out.save("../results/result_" + filename)
