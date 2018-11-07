@@ -10,12 +10,12 @@ import time
 import multiprocessing
 from multiprocessing import Process, Queue
 
-matcher_task_to_solve = 0
-
 
 def f(args):
 
-    tasks, results = args[0], args[1]
+    tasks, results, doneTasks, workerId, matcher_task_to_solve = args
+
+    print(doneTasks, workerId)
 
     net = Net()
     net.load_state_dict(torch.load("../models/model.pt"))
@@ -38,7 +38,17 @@ def f(args):
             sampleWidthOriginalSized = round(originalSize[0] * sampleSize[0] / resizedWidth)
 
             results.put(Match(leftOffsetOriginalSized, topOffsetOriginalSized, sampleWidthOriginalSized,
-                                      sampleHeightOriginalSized, is_face_probabilty))
+                              sampleHeightOriginalSized, is_face_probabilty))
+
+        doneTasks[workerId] += 1
+
+        doneTasksCounter = 0
+        for wId in range(len(doneTasks)):
+            doneTasksCounter += doneTasks[wId]
+
+        if doneTasksCounter % 1000 == 0:
+            progress = int(doneTasksCounter / matcher_task_to_solve * 100)
+            print(str(doneTasksCounter) + "/" + str(matcher_task_to_solve) + " tasks done (" + str(progress) + "%)")
 
 
 class Matcher:
@@ -84,9 +94,6 @@ class Matcher:
 
             resizedHeight -= offset[1]
 
-
-
-
         matcher_task_to_solve = len(tasks)
 
         number_of_worker = multiprocessing.cpu_count()
@@ -94,10 +101,12 @@ class Matcher:
 
         threads = {}
         threadsTasks = []
+        threadsDoneTasks = []
         threadsResults = []
 
         for t in range(number_of_worker):
             threadsTasks.append([])
+            threadsDoneTasks.append(0)
             threadsResults.append(Queue())
 
 
@@ -109,7 +118,7 @@ class Matcher:
         start = time.time()
 
         for t in range(number_of_worker):
-            threads[t] = Process(target=f, args=([threadsTasks[t], threadsResults[t]],))
+            threads[t] = Process(target=f, args=([threadsTasks[t], threadsResults[t],threadsDoneTasks,t,matcher_task_to_solve],))
             threads[t].start()
 
         print("Work is progressing...")
@@ -131,5 +140,7 @@ class Matcher:
         end = time.time()
 
         duration = end - start
+
+        print(str(matcher_task_to_solve) + "/" + str(matcher_task_to_solve) + " tasks done (100%)")
 
         print("Duration in seconds : " + str(int(duration)))
