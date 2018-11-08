@@ -43,6 +43,7 @@ if __name__ == '__main__':
     stop_epsilon = 0.75
     best_epsilon = 0.1
     best_model = Net()
+    refresh_model = 1000
     done = False
     print("Start training")
     for epoch in range(15):
@@ -59,7 +60,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-            if batch % 100 == 0:
+            if batch % refresh_model == 0:
                 running_loss = 0.0
                 for X_test, y_test in iter(testloader):
                     X_test, y_test = X_test.to(device), y_test.float().to(device)
