@@ -16,6 +16,7 @@ from torch.utils.data import SubsetRandomSampler
 
 plt.interactive(False)
 
+
 def imshow(img):
     img = img / 2 + 0.5
     npimg = img.numpy()
@@ -24,13 +25,12 @@ def imshow(img):
 
 
 if __name__ == '__main__':
-    device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
     batch_size = 64
-    valid_threshold = .9
     valid_split = .2
     num_folds = 2
-    num_epoch = 2
+    num_epoch = 15
 
     trainset = torchvision.datasets.ImageFolder(root="../train_images", transform=Net.transform)
 
@@ -39,7 +39,6 @@ if __name__ == '__main__':
     fold_split_size = int(np.floor(valid_split * fold_size))
     indices = list(range(dataset_size))
 
-    # trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=4)
     testset = torchvision.datasets.ImageFolder(root="../test_images", transform=Net.transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True, num_workers=4)
 
@@ -65,16 +64,11 @@ if __name__ == '__main__':
 
     classes = ('Non-Visage', 'Visage    ')
 
-    # print("Building net")
-    # net = Net()
-    # net.to(device)
-
     criterion = nn.MSELoss()
     optimizer = optim.SGD(net[0].parameters(), lr=0.001, momentum=0.9)
 
-    stop_epsilon = 0.1
+    stop_epsilon = 0.75
     best_epsilon = 0.1
-    # best_model = Net()
     done = False
     print("Start training")
     for i in range(num_folds):
@@ -123,10 +117,10 @@ if __name__ == '__main__':
     print('Finished Training')
 
     # Compare model
-    best_fold = [0,0]
+    best_fold = [0, .0]
     for i in range(num_folds):
-        total = 0
-        correct = 0
+        total = .0
+        correct = .0
         for data in testloader:
             images, labels = data
             if device.type != 'cpu':
@@ -139,9 +133,9 @@ if __name__ == '__main__':
         if acc > best_fold[1]:
             best_fold[0] = i
             best_fold[1] = acc
-        print('Score of the network %d on the test : %d %% ' % (i, (100 * acc)))
+        print('Accuracy of the network %d on the test set : %d %% ' % (i, (100 * acc)))
 
-    print('Selected model is %d with %d %% of accuracy' % (best_fold[0], best_fold[1]))
+    print('Model %d selected with %d %% of accuracy' % (best_fold[0], (100 * best_fold[1])))
     torch.save(best_model[best_fold[0]].state_dict(), "../model.new.pt")
 
     dataiter = iter(testloader)
