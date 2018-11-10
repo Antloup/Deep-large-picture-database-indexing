@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         help='Percentage of the validation set (from 0 to 1)')
     parser.add_argument('-nf', '--num-folds', metavar='NUM-FOLDS', type=int, default=2,
                         help='Number of folds. If there is more folds than network type, folds network type will loop')
-    parser.add_argument('-ne', '--num-epoch', metavar='NUM-EPOCH', type=int, default=2,
+    parser.add_argument('-ne', '--num-epoch', metavar='NUM-EPOCH', type=int, default=15,
                         help='Number of epoch')
     parser.add_argument('-se', '--stop-epsilon', metavar='STOP-EPSILON', type=float, default=0.75,
                         help='Percentage of loss margin allowed before quiting training (0 = no margin, 1= up to 2 times best loss)')
