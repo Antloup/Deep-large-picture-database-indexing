@@ -23,6 +23,8 @@ if __name__ == '__main__':
                         help='Minimum distance for clustering window')
     parser.add_argument('-mv', '--min-votes', metavar='MIN-VOTES', type=int, default=1,
                         help='Number minimum of vote for face detection')
+    parser.add_argument('-m', '--model', metavar='MODEL', type=str, default="model.pt",
+                        help='Name of the model (in "models" folder)')
 
     args = parser.parse_args()
 
@@ -32,7 +34,7 @@ if __name__ == '__main__':
         preprocessedWidth = int(args.maxheight * image.size[0] / image.size[1])
         image = torchvision.transforms.Resize((args.maxheight, preprocessedWidth))(image)
 
-    matcher = Matcher(image, sampleSize=(36, 36), offset=(args.offset, args.offset), threshold=args.threshold)
+    matcher = Matcher(image, sampleSize=(36, 36), offset=(args.offset, args.offset), threshold=args.threshold, model=args.model)
 
     matches = matcher.matches
 
